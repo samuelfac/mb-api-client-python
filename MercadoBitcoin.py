@@ -6,11 +6,15 @@ import http.client
 import json
 import urllib
 import time
+
+import urllib.request
+
 from enum import Enum
 from collections import OrderedDict
 
 REQUEST_HOST = 'www.mercadobitcoin.com.br'
-REQUEST_PATH = '/tapi/v3/'
+TRADER_REQUEST_PATH = '/tapi/v3/'
+API_REQUEST_PATH = '/api/'
 
 class MessageType(Enum):
     INFO = 'INFO'
@@ -53,7 +57,7 @@ Em caso de dúvidas nos termos consulte o Glossário (https://www.mercadobitcoin
         params = urllib.parse.urlencode(params)
 
         # Gerar MAC
-        params_string = REQUEST_PATH + '?' + params
+        params_string = TRADER_REQUEST_PATH + '?' + params
         H = hmac.new(bytearray(self.MB_TAPI_SECRET.encode()), digestmod=hashlib.sha512)
         H.update(params_string.encode())
         tapi_mac = H.hexdigest()
@@ -69,7 +73,7 @@ Em caso de dúvidas nos termos consulte o Glossário (https://www.mercadobitcoin
         conn = ''
         try:
             conn = http.client.HTTPSConnection(REQUEST_HOST)
-            conn.request("POST", REQUEST_PATH, params, headers)
+            conn.request("POST", TRADER_REQUEST_PATH, params, headers)
 
             # Print response data to console
             response = conn.getresponse()
@@ -304,3 +308,76 @@ IMPORTANTE: Só é permitida a transferência para destinos 'confiáveis'. A nec
         }
         return self.__withdraw_coin(Coin.LTC, description, params)
         
+
+class Api():
+    '''API de Dados v3
+MERCADO BITCOIN
+https://www.mercadobitcoin.com.br/api-doc/ '''
+    
+    def __get(self, method, nomeRetorno = ''):
+        req = urllib.request.Request('https://'+REQUEST_HOST + API_REQUEST_PATH + method)
+        r = urllib.request.urlopen(req).read()
+        # É fundamental utilizar a classe OrderedDict para preservar a ordem dos elementos
+        response_json = json.loads(r.decode('utf-8'), object_pairs_hook=OrderedDict)
+
+        if(nomeRetorno and nomeRetorno!=''):
+            return json.dumps(response_json[nomeRetorno], indent=4)
+        else:
+            return json.dumps(response_json, indent=4)
+
+
+    def ticker(self):
+        '''Retorna as informações do mercado de bitcoin.'''
+        return self.__get('ticker','ticker')
+    
+    def ticker_litecoin(self):
+        '''Retorna as informações do mercado de litecoin.'''
+        return self.__get('ticker_litecoin','ticker')
+    
+    def orderbook(self):
+        '''Retorna o livro de ofertas do mercado de bitcoin.'''
+        return self.__get('orderbook')
+    
+    def orderbook_litecoin(self):
+        '''Retorna o livro de ofertas do mercado de litecoin.'''
+        return self.__get('orderbook_litecoin')
+    
+    def trades(self):
+        '''Retorna a lista de operações ocorridas nos mercados de bitcoin.'''
+        return self.__get('trades')
+    
+    def trades_tid(self, tid):
+        '''Retorna as operações com tid maiores do que o indicado.'''
+        return self.__get('trades/?tid='+tid)
+    
+    def trades_since(self, since):
+        '''Equivalente ao tid, porém com outra nomenclatura de parâmetro para o tid.'''
+        return self.__get('trades/?since='+since)
+    
+    def trades_timestamp_inicial(self, timestamp_inicial):
+        '''Retorna as operações a partir da data e hora em Era Unix (timestamp) indicada.'''
+        return self.__get('trades/'+timestamp_inicial)
+    
+    def trades_between(self, timestamp_inicial, timestamp_final):
+        '''Retorna as operações a partir de data e hora em Era Unix (timestamp) indicada até a data e hora final indicada.'''
+        return self.__get('trades/'+timestamp_inicial + '/'+timestamp_final)
+    
+    def trades_litecoin(self):
+        '''Retorna a lista de operações ocorridas nos mercados de litecoin.'''
+        return self.__get('trades_litecoin')
+    
+    def trades_litecoin_tid(self, tid):
+        '''Retorna as operações com tid maiores do que o indicado.'''
+        return self.__get('trades_litecoin/?tid='+tid)
+    
+    def trades_litecoin_since(self, since):
+        '''Equivalente ao tid, porém com outra nomenclatura de parâmetro para o tid.'''
+        return self.__get('trades_litecoin/?since='+since)
+    
+    def trades_litecoin_timestamp_inicial(self, timestamp_inicial):
+        '''Retorna as operações a partir da data e hora em Era Unix (timestamp) indicada.'''
+        return self.__get('trades_litecoin/'+timestamp_inicial)
+    
+    def trades_litecoin_between(self, timestamp_inicial, timestamp_final):
+        '''Retorna as operações a partir de data e hora em Era Unix (timestamp) indicada até a data e hora final indicada.'''
+        return self.__get('trades_litecoin/'+timestamp_inicial + '/'+timestamp_final)
